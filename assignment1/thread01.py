@@ -2,7 +2,6 @@
 from time import sleep, ctime
 from threading import Thread
 
-# a custom function that blocks for the moment
 def task():
     # block for a moment
     sleep(1)
@@ -13,6 +12,5 @@ def task():
 thread = Thread(target=task)
 # run the thread
 thread.start()
-# waait for the thread to finish
 print(f'{ctime()} Waiting for the thread...')
 thread.join()
