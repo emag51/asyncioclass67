@@ -2,8 +2,6 @@
 from random import random
 import asyncio
 
-menu = ["Rice", "Noodle", "Curry"]
-
 # coroutine to execute in a new task
 async def task_coro(arg):
     # generate a random value between 0 and 1
@@ -18,6 +16,7 @@ async def task_coro(arg):
 # main coroutine
 async def main():
     # create many tasks
+    menu = ["Rice", "Noodle", "Curry"]
     tasks = [asyncio.create_task(task_coro(i)) for i in menu]
     # wait for the first task to complete
     done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
