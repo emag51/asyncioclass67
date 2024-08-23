@@ -1,9 +1,9 @@
 import time
 import asyncio 
-
+# 1, 3, 5, 10, 24
 judit_compute = 0.1
 opponent_compute = 0.5
-opponent = 24
+opponent = 15
 move_board = 30
 
 async def main(i):
