@@ -18,32 +18,41 @@ class Customer:
         self.products = products
 
 async def checkout_customer(queue: Queue, cashier_number: int):
-    customer_count = 0
-    total_time = 0
-    while not queue.empty():
+    customer_count = 0  
+    total_time = 0  
+    while not queue.empty():   
         customer: Customer = await queue.get()
+        
         customer_start_time = time.perf_counter()
-        print(f"The Cashier{cashier_number}"
-              f" will checkout Customer{customer.customer_id}") 
+        print(f"The Cashier_{cashier_number}"
+              f" will checkout Customer_{customer.customer_id}") 
 
         for product in customer.products:
-            print(f"The cashier{cashier_number}"
-                  f" will checkout Customer{customer.customer_id}'s"
-                  f" product{product.product_name}"
+            print(f"The cashier_{cashier_number}"
+                  f" will checkout Customer_{customer.customer_id}'s"
+                  f" product_{product.product_name}"
                   f" in {product.checkout_time} secs")
-
+            total_time += product.checkout_time 
+            
             await asyncio.sleep(product.checkout_time)
 
+        
+        print(f" The cashier_{cashier_number}"
+              f" finish checkout Customer_{customer.customer_id}"
+              f" in {round(time.perf_counter() - customer_start_time, ndigits = 2)} secs")
+        
         checkout_duration = round(time.perf_counter() - customer_start_time, ndigits=2)
         customer_count += 1
-        total_time += checkout_duration 
-        print(f" The cashier{cashier_number}"
-              f" finish checkout Customer{customer.customer_id}"
-              f" in {round(time.perf_counter() - customer_start_time, ndigits = 2)} secs")
         queue.task_done()
+        
 
     return customer_count, total_time
+    
 
+# we implement the generate_customer method as a factory method for producing customers.
+#
+# We first define a product series and the required checkout time for each product. 
+# Then, we place 0 to 4 products in each customer’s shopping cart.
 def generate_customer(customer_id: int) -> Customer:
     all_products = [Product('beef', 1),
                     Product('banana', .4),
@@ -51,50 +60,45 @@ def generate_customer(customer_id: int) -> Customer:
                     Product('diapers', .2)]
     return Customer(customer_id, all_products)
 
-
+# we implement the customer_generation method as a producer. 
+# This method generates several customer instances regularly 
+# and puts them in the queue. If the queue is full, the put method will wait.
 async def customer_generation(queue: Queue, customers: int):
     customer_count = 0
     while True:
         customers = [generate_customer(the_id)
-                     for the_id in range(customer_count, customer_count+customers)]
+                     for the_id in range(customer_count, customer_count + customers)]
+        
         for customer in customers:
-            print("Waiting to put customer in line....")
+            print("waiting to put customer in line....")
             await queue.put(customer)
-            print("Customer put in line...")
+            print("Customer put in line....")
+        
         customer_count = customer_count + len(customers)
-        await asyncio.sleep(.001)
+        # await asyncio.sleep(.001)
         return customer_count
 
 
+# Finally, we use the main method to initialize the queue, 
+# producer, and consumer, and start all concurrent tasks.
 async def main():
-    customer_queue = Queue(3)
+    CUSTOMER = 10
+    QUEUE = 3
+    CASHIER = 5
+    customer_queue = Queue(QUEUE)
     customer_start_time = time.perf_counter()
-    customer_producer = asyncio.create_task(customer_generation(customer_queue, 10))
-    cashiers = [checkout_customer(customer_queue, i) for i in range(5)]
+    customer_producer = asyncio.create_task(customer_generation(customer_queue, CUSTOMER))
+    cashiers = [checkout_customer(customer_queue, i) for i in range(CASHIER)]
     results = await asyncio.gather(customer_producer, *cashiers)
-
+    # print(results[0])
+    # print(results[1:])
     print("---------------------")
-    print(results)
-    for i, (customer_count, total_time) in enumerate(results[1:]):
-        print(f"The Cashier{i} take {customer_count} customers total {round(total_time, 2)} secs")
-
-    print(
-        f"The supermarket process finished "
-          f"{customer_producer.result()} customers "
-          f"Total time is {round(time.perf_counter() - customer_start_time, ndigits=2)} secs")
+    for i, (customer_count, total_time) in enumerate(results[1:]):  
+        print(f"The Cashier_{i} take {customer_count} customers total {round(total_time, 2)} secs")
+    
+    print(f"The supermarket process finish"
+          f"{customer_producer.result()} customers"
+            f" in {round(time.perf_counter() - customer_start_time, ndigits= 2)} secs")
     
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-# +--------|--------|---------|-------------------------------------------------------------------------------|---------    
-# Customer | Queue  | Cashier |                             Customer/Time by Customer               	      |  Total
-#          |        |         |   C   |   1   |   C   |   2   |   C   |   3   |   C   |   4   |   C   |   5   |
-# 2	       | 2	    | 2		  |   1   | 2.02  |   1   |  2.02 |   -   |   -   |   -   |   -   |   -   |   -   | 2.02
-# 3	       | 2	    | 2		  |   1   | 2.04  |   2   |  4.06 |   -   |   -   |   -   |   -   |   -   |   -   | 4.07                                		
-# 4	       | 2	    | 2		  |   2   | 4.04  |   2   |  4.04 |   -   |   -   |   -   |   -   |   -   |   -   | 4.04
-# 5	       | 5	    | 5		  |   1   | 2.01  |   1   |  2.01 |   1   |  2.01 |   1   |  2.01 |   1   | 2.01  | 2.02
-# 10       | 3	    | 3		  |   3   | 6.05  |   3   |  6.05 |   4   |  8.07 |   -   |   -   |   -   |   -   | 8.08
-# 10       | 3		| 5       |   3   | 6.07  |   3   |  6.06 |   4   |  8.08 |   3   |   -   |   4   |   -   | 8.08
-# 20       | 5      | 5       |   4   | 8.08  |   4   |  8.08 |   4   |  8.08 |   4   |  8.08 |   4   | 8.08  | 8.08
-# +--------|--------|---------|-------------------------------------------------------------------------------|---------    

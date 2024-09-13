@@ -42,7 +42,10 @@ async def checkout_customer(queue: Queue, cashier_number: int):
         # Process each product in the customer's list
         for product in customer.products:
             # Modify checkout time based on cashier number
-            adjusted_time = round(product.checkout_time + (0.1 * cashier_number), 2)
+            if cashier_number == 2:
+                adjusted_time = 0.1
+            else:
+                adjusted_time = round(product.checkout_time + (0.1 * cashier_number), 2)
             print(f"Cashier_{cashier_number} will checkout "
                   f"Customer_{customer.customer_id}'s {product.product_name} in {adjusted_time} seconds")
 
@@ -86,9 +89,9 @@ async def customer_generation(queue: Queue, customers: int):
 # Finally, we use the main method to initialize the queue, 
 # producer, and consumer, and start all concurrent tasks.
 async def main():
-    CUSTOMER = 2  # Number of customers to generate
-    QUEUE_SIZE = 2  # Max queue size
-    CASHIER_COUNT = 2  # Number of cashiers
+    CUSTOMER = 10  # Number of customers to generate
+    QUEUE_SIZE = 3  # Max queue size
+    CASHIER_COUNT = 5  # Number of cashiers
 
     customer_queue = Queue(QUEUE_SIZE)
     customers_start_time = time.perf_counter()
